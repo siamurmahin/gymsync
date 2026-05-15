@@ -16,8 +16,9 @@ jobs:
           password: ${{ secrets.CPANEL_PASSWORD }}
           port: 22
           script: |
+            export PATH="/home/websflku/.nvm/versions/node/v20.20.2/bin:$PATH"
             cd ${{ secrets.APP_PATH }}
             git pull origin main
-            source ~/nodevenv/gymsync/20/bin/activate && npm install
-            source ~/nodevenv/gymsync/20/bin/activate && npm run build
+            npm install
+            npm run build
             mkdir -p tmp && touch tmp/restart.txt
