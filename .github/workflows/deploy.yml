@@ -14,7 +14,7 @@ jobs:
           host: ${{ secrets.CPANEL_HOST }}
           username: ${{ secrets.CPANEL_USERNAME }}
           password: ${{ secrets.CPANEL_PASSWORD }}
-          port: 22
+          port: 21098
           script: |
             export PATH="/home/websflku/.nvm/versions/node/v20.20.2/bin:$PATH"
             cd ${{ secrets.APP_PATH }}
