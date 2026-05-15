@@ -18,6 +18,6 @@ jobs:
           script: |
             cd ${{ secrets.APP_PATH }}
             git pull origin main
-            npm install
-            npm run build
+            source ~/nodevenv/gymsync/20/bin/activate && npm install
+            source ~/nodevenv/gymsync/20/bin/activate && npm run build
             mkdir -p tmp && touch tmp/restart.txt
