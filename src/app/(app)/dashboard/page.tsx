@@ -3,29 +3,22 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { cn, goalLabel } from '@/lib/utils'
+import { goalLabel } from '@/lib/utils'
 import { DeleteWorkoutButton } from '@/components/DeleteWorkoutButton'
+import { DashboardWeeklyPlan } from '@/components/DashboardWeeklyPlan'
 import type { DayPlan, Goal, WorkoutSession } from '@/lib/types'
-import { Plus, Trophy, Flame, Calendar, Pencil } from 'lucide-react'
-
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+import { Plus, Trophy, Flame, Calendar } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const now = new Date()
-  // Start of this week (Monday)
-  const dayOfWeek = now.getDay() // 0=Sun
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-  const weekStart = new Date(now)
-  weekStart.setDate(now.getDate() + mondayOffset)
-  weekStart.setHours(0, 0, 0, 0)
-  const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekStart.getDate() + 7)
+  // Fetch last 14 days of sessions — client component filters by local week
+  const twoWeeksAgo = new Date()
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
 
-  const [{ data: profile }, { data: sessions }, { data: weekSessions }] = await Promise.all([
+  const [{ data: profile }, { data: sessions }, { data: recentSessions }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase
       .from('workout_sessions')
@@ -35,27 +28,22 @@ export default async function DashboardPage() {
       .limit(10),
     supabase
       .from('workout_sessions')
-      .select('created_at, completed_at, muscle_groups')
+      .select('created_at, completed_at')
       .eq('user_id', user.id)
-      .gte('created_at', weekStart.toISOString())
-      .lt('created_at', weekEnd.toISOString()),
+      .gte('created_at', twoWeeksAgo.toISOString())
+      .order('created_at', { ascending: false }),
   ])
 
   if (!profile?.onboarded) redirect('/onboarding')
 
   const completed = (sessions ?? []).filter((s: WorkoutSession) => s.completed_at)
   const weeklyPlan: DayPlan[] | null = profile.weekly_plan as DayPlan[] | null
-  const todayName = DAY_NAMES[now.getDay()]
-
-  // Which week days have a completed session
-  const completedDays = new Set(
-    (weekSessions ?? [])
-      .filter((s: { completed_at: string | null }) => s.completed_at)
-      .map((s: { created_at: string }) => DAY_NAMES[new Date(s.created_at).getDay()])
-  )
-
   const trainingDays = weeklyPlan ? weeklyPlan.filter(d => !d.isRest).length : 0
-  const doneThisWeek = completedDays.size
+
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const doneThisWeek = (recentSessions ?? [])
+    .filter(s => s.completed_at && new Date(s.created_at) >= sevenDaysAgo).length
 
   return (
     <div className="space-y-6">
@@ -96,95 +84,12 @@ export default async function DashboardPage() {
         </Button>
       </Link>
 
-      {/* Weekly overview */}
+      {/* Weekly overview — client component for correct local timezone */}
       {weeklyPlan && weeklyPlan.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">This week</h2>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-zinc-500">{doneThisWeek}/{trainingDays} done</span>
-              <Link href="/planner" className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-                <Pencil className="h-3 w-3" />
-                Edit
-              </Link>
-            </div>
-          </div>
-
-          {/* Progress bar */}
-          <div className="h-1.5 w-full rounded-full bg-zinc-800">
-            <div
-              className="h-1.5 rounded-full bg-emerald-500 transition-all duration-500"
-              style={{ width: trainingDays > 0 ? `${(doneThisWeek / trainingDays) * 100}%` : '0%' }}
-            />
-          </div>
-
-          {/* Day pills */}
-          <div className="grid grid-cols-7 gap-1.5">
-            {weeklyPlan.map((day) => {
-              const isToday = day.day === todayName
-              const isDone = completedDays.has(day.day)
-              return (
-                <div
-                  key={day.day}
-                  className={cn(
-                    'flex flex-col items-center gap-1 rounded-xl py-2.5 px-1 text-center transition-all',
-                    isToday && !day.isRest && 'ring-2 ring-emerald-500 ring-offset-1 ring-offset-zinc-950',
-                    isDone ? 'bg-emerald-500/20' :
-                    day.isRest ? 'bg-zinc-900' : 'bg-zinc-800/60',
-                  )}
-                >
-                  <span className={cn(
-                    'text-[10px] font-bold',
-                    isToday ? 'text-emerald-400' : 'text-zinc-500',
-                  )}>
-                    {day.day.slice(0, 3).toUpperCase()}
-                  </span>
-                  <div className={cn(
-                    'h-2 w-2 rounded-full',
-                    isDone ? 'bg-emerald-400' :
-                    day.isRest ? 'bg-zinc-700' : 'bg-zinc-500',
-                  )} />
-                  <span className={cn(
-                    'text-[9px] font-medium leading-tight',
-                    isDone ? 'text-emerald-400' :
-                    day.isRest ? 'text-zinc-700' : 'text-zinc-400',
-                  )}>
-                    {day.isRest ? 'REST' : isDone ? 'DONE' : 'TRAIN'}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Today's focus */}
-          {(() => {
-            const today = weeklyPlan.find(d => d.day === todayName)
-            if (!today) return null
-            return (
-              <Card className={cn(
-                'flex items-center justify-between',
-                today.isRest ? 'border-zinc-800' : 'border-emerald-500/30 bg-emerald-500/5',
-              )}>
-                <div>
-                  <p className="text-xs text-zinc-500 uppercase tracking-wider">Today</p>
-                  <p className={cn('font-semibold', today.isRest ? 'text-zinc-500' : 'text-zinc-50')}>
-                    {today.isRest ? 'Rest & Recovery' : today.focus}
-                  </p>
-                  {!today.isRest && (
-                    <p className="text-xs text-zinc-500">{today.exerciseCount} exercises planned</p>
-                  )}
-                </div>
-                {!today.isRest && (
-                  <Link href={`/workout?muscles=${today.muscleGroups.join(',')}`}>
-                    <Button size="sm" className="flex-shrink-0">
-                      {completedDays.has(todayName) ? 'Again' : 'Train now'}
-                    </Button>
-                  </Link>
-                )}
-              </Card>
-            )
-          })()}
-        </div>
+        <DashboardWeeklyPlan
+          weeklyPlan={weeklyPlan}
+          sessions={recentSessions ?? []}
+        />
       )}
 
       {/* Recent sessions */}
