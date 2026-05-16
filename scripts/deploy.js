@@ -38,6 +38,10 @@ const UPLOAD_DIRS = [
 
 // Individual files to upload (relative to LOCAL_BASE → REMOTE_BASE)
 const UPLOAD_FILES = [
+  // project root — keep server deps in sync
+  'package.json',
+  'package-lock.json',
+  // .next manifests
   '.next/BUILD_ID',
   '.next/build-manifest.json',
   '.next/app-path-routes-manifest.json',
@@ -215,18 +219,26 @@ async function main() {
   await ssh.execCommand(`find ${REMOTE_BASE}/.next -type d -exec chmod 755 {} \\;`);
   await ssh.execCommand(`find ${REMOTE_BASE}/.next -type f -exec chmod 644 {} \\;`);
 
-  // 6. Ensure _next symlink (LiteSpeed static file serving)
+  // 6. Install production deps on server (fast — no build, just packages)
+  console.log('\n📦 Installing server dependencies...');
+  const npmInstall = await ssh.execCommand(
+    `export PATH="/home/websflku/.nvm/versions/node/v20.20.2/bin:$PATH" && cd ${REMOTE_BASE} && npm install --omit=dev 2>&1`
+  );
+  const installLines = npmInstall.stdout.trim().split('\n');
+  console.log(' ', installLines[installLines.length - 1]); // last line (summary)
+
+  // 7. Ensure _next symlink (LiteSpeed static file serving)
   console.log('\n🔗 Ensuring _next symlink...');
   await ssh.execCommand(`ln -sfn ${REMOTE_BASE}/.next ${REMOTE_BASE}/_next`);
 
-  // 7. Kill old lsnode process (LiteSpeed will restart it fresh)
+  // 8. Kill old lsnode process (LiteSpeed will restart it fresh)
   console.log('\n♻  Restarting app...');
   const kill = await ssh.execCommand(
     `kill $(ps aux | grep "lsnode:${REMOTE_BASE}" | grep -v grep | awk '{print $2}') 2>/dev/null; echo "done"`
   );
   console.log('  ', kill.stdout.trim());
 
-  // 8. Wait and health check
+  // 9. Wait and health check
   console.log('\n⏳ Waiting 8s for restart...');
   await new Promise((r) => setTimeout(r, 8000));
 
