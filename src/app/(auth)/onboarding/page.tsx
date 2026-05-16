@@ -152,32 +152,43 @@ export default function OnboardingPage() {
     if (!goal) return
     setSaving(true)
     setError('')
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/login'); return }
+    try {
+      const supabase = createClient()
+      const { data: { user }, error: authErr } = await supabase.auth.getUser()
+      if (authErr || !user) { router.push('/login'); setSaving(false); return }
 
-    const { error: err } = await supabase.from('profiles').upsert({
-      id: user.id,
-      username: nickname || null,
-      gender,
-      age: age ? parseInt(age) : null,
-      height: height ? parseFloat(height) : null,
-      height_unit: heightUnit,
-      weight: weight ? parseFloat(weight) : null,
-      weight_unit: weightUnit,
-      body_type: bodyType,
-      desired_body: desiredBody,
-      goal,
-      focus_areas: focusAreas,
-      build_goals: buildGoals,
-      equipment,
-      workout_duration: duration,
-      weekly_plan: weeklyPlan,
-      onboarded: true,
-    })
+      const { error: err } = await supabase.from('profiles').upsert({
+        id: user.id,
+        username: nickname || null,
+        gender,
+        age: age ? parseInt(age) : null,
+        height: height ? parseFloat(height) : null,
+        height_unit: heightUnit,
+        weight: weight ? parseFloat(weight) : null,
+        weight_unit: weightUnit,
+        body_type: bodyType,
+        desired_body: desiredBody,
+        goal,
+        focus_areas: focusAreas,
+        build_goals: buildGoals,
+        equipment,
+        workout_duration: duration,
+        weekly_plan: weeklyPlan,
+        onboarded: true,
+      })
 
-    if (err) { setError(err.message); setSaving(false); return }
-    router.push('/dashboard')
+      if (err) {
+        console.error('Onboarding upsert error:', err)
+        setError(err.message || 'Failed to save profile')
+        setSaving(false)
+        return
+      }
+      router.push('/dashboard')
+    } catch (e) {
+      console.error('Onboarding error:', e)
+      setError(e instanceof Error ? e.message : 'Something went wrong')
+      setSaving(false)
+    }
   }
 
   const canNext: Record<number, boolean> = {
