@@ -14,10 +14,12 @@ const FILTERS: { value: MuscleGroup | 'all'; label: string; emoji: string }[] = 
   { value: 'back',      label: 'Back',      emoji: '🏋️' },
   { value: 'legs',      label: 'Legs',      emoji: '🦵' },
   { value: 'shoulders', label: 'Shoulders', emoji: '🔝' },
-  { value: 'arms',      label: 'Arms',      emoji: '💪' },
+  { value: 'biceps',    label: 'Biceps',    emoji: '💪' },
+  { value: 'triceps',   label: 'Triceps',   emoji: '🦾' },
+  { value: 'forearms',  label: 'Forearms',  emoji: '🤜' },
   { value: 'abs',       label: 'Abs',       emoji: '🔥' },
-  { value: 'butt',      label: 'Glutes',    emoji: '🍑' },
-  { value: 'cardio',    label: 'Cardio',    emoji: '🏃' },
+  { value: 'glutes',    label: 'Glutes',    emoji: '🍑' },
+  { value: 'calves',    label: 'Calves',    emoji: '🦶' },
 ]
 
 interface Props {

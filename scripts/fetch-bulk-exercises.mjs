@@ -17,16 +17,16 @@ const EXERCISES_JSON_URL =
   'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
 
 // Map free-exercise-db primaryMuscles → our muscle_group values
-// Allowed values in DB: chest | back | legs | shoulders | arms | abs
+// Allowed values in DB: chest | back | legs | shoulders | biceps | triceps | forearms | abs | glutes | calves
 const MUSCLE_MAP = {
   abdominals:    'abs',
   abductors:     'legs',
   adductors:     'legs',
-  biceps:        'arms',
-  calves:        'legs',
+  biceps:        'biceps',
+  calves:        'calves',
   chest:         'chest',
-  forearms:      'arms',
-  glutes:        'legs',
+  forearms:      'forearms',
+  glutes:        'glutes',
   hamstrings:    'legs',
   lats:          'back',
   'lower back':  'back',
@@ -35,9 +35,9 @@ const MUSCLE_MAP = {
   neck:          'shoulders',
   quadriceps:    'legs',
   shoulders:     'shoulders',
-  triceps:       'arms',
+  triceps:       'triceps',
   'hip flexors': 'legs',
-  brachialis:    'arms',
+  brachialis:    'biceps',
   'inner thighs':'legs',
   'it band':     'legs',
 };

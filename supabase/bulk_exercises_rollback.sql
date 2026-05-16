@@ -1,5 +1,5 @@
 -- Rollback bulk import — deletes only the bulk-imported exercises
--- Generated: 2026-05-16T01:30:03.345Z
+-- Generated: 2026-05-16T01:40:55.118Z
 -- Exercises to remove: 748
 --
 -- WARNING: Also removes any workout_exercises referencing these exercises.
