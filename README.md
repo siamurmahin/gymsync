@@ -1,36 +1,229 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GymSync
 
-## Getting Started
+Free workout planner for gym beginners. Plan workouts, log sets & reps, track progress, join gym groups.
 
-First, run the development server:
+**Live:** https://gymsync.websylime.com
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16.2.6 (App Router, Turbopack) |
+| Language | TypeScript |
+| Styling | Tailwind CSS v4 |
+| Backend | Supabase (Postgres + Auth + Realtime) |
+| Hosting | Namecheap cPanel shared hosting (LiteSpeed + Phusion Passenger) |
+| Node.js | v20.20.2 via NVM |
+| PWA | next-pwa, manifest.json, sw.js |
+
+---
+
+## Features
+
+- **Auth** — email/password signup, login, onboarding flow
+- **Dashboard** — overview of recent workouts and stats
+- **Workout Planner** — create and schedule workouts
+- **Exercise Library** — 150+ exercises with animated images (0.jpg/1.jpg cycling on hover) sourced from [free-exercise-db](https://github.com/yuhonas/free-exercise-db)
+- **Active Workout** — real-time set/rep logging during a session
+- **Progress Tracker** — charts and history
+- **Group Gym** — create/join gym groups with real-time chat (Supabase Realtime)
+- **Profile & Settings** — user preferences
+- **PWA** — installable on mobile, offline-ready service worker
+- **SEO** — sitemap.xml, robots.txt, OG tags
+
+---
+
+## Exercise Images
+
+Images use `raw.githubusercontent.com/yuhonas/free-exercise-db` URLs.  
+The `AnimatedExerciseImage` component detects `githubusercontent.com` URLs and cycles between `0.jpg` and `1.jpg` on hover to show the exercise motion. Non-GitHub URLs get a Ken Burns pan/zoom effect instead.
+
+**Important:** The file `supabase/update_exercise_images.sql` (old) overwrote these with static wger.de/Unsplash URLs — do NOT re-run it.  
+To restore correct URLs run: `supabase/restore_github_images.sql`
+
+---
+
+## Database
+
+Supabase project: `xclzeevcuhsnbqlufbog.supabase.co`
+
+Key SQL files:
+- `exercises_seed.sql` — seed 150+ exercises with GitHub image URLs
+- `more_exercises.sql` — additional exercises
+- `supabase/restore_github_images.sql` — restore animated GitHub image URLs if overwritten
+- `supabase/fix_profile_trigger.sql` — trigger that auto-creates `profiles` row when a new user signs up (fixes FK violation on `gym_group_members`)
+
+### Profile Trigger (critical)
+
+New users need a `profiles` row before they can create/join groups. Without this trigger, `gym_group_members` FK constraint fails.
+
+```sql
+-- Run this in Supabase SQL editor if groups are broken for new users:
+-- supabase/fix_profile_trigger.sql
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Local Development
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev       # http://localhost:3000
+npm run build     # production build
+npm run lint
+```
 
-## Learn More
+Create `.env.local` with:
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xclzeevcuhsnbqlufbog.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Architecture
 
-## Deploy on Vercel
+The server **cannot build** — shared hosting has insufficient RAM (OOM on `next build`).  
+**Solution:** Build locally on your machine, upload built artifacts via SFTP, restart the LiteSpeed Node.js process.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+Local machine → npm run build → SFTP upload .next/ → kill lsnode → LiteSpeed restarts fresh
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Server Details
+
+| Item | Value |
+|------|-------|
+| Host | `server234.web-hosting.com` |
+| SSH port | **21098** (not 22) |
+| Username | `websflku` |
+| App path | `/home/websflku/gymsync.websylime.com` |
+| NVM Node | `/home/websflku/.nvm/versions/node/v20.20.2/bin/node` |
+| venv Node | `/home/websflku/nodevenv/gymsync.websylime.com/20/bin/node` |
+| Passenger startup file | `server.js` |
+| `.htaccess` | Auto-generated by cPanel CloudLinux — do NOT edit |
+
+### Manual Deploy
+
+```bash
+# One-time setup:
+# 1. Create .deploy.env in project root:  SSH_PASSWORD=your_cpanel_password
+# 2. npm install  (node-ssh devDep already in package.json)
+
+npm run deploy            # build + deploy (~8-12 min)
+npm run deploy:no-build   # upload current .next without rebuilding
+```
+
+### Auto-Deploy (GitHub Actions)
+
+Every push to `main` triggers `.github/workflows/deploy.yml`:
+1. `npm ci` on ubuntu-latest (7GB RAM, no OOM)
+2. `npm run build`
+3. `node scripts/deploy.js --no-build` (SFTP upload + restart)
+
+Required GitHub secret: `CPANEL_PASSWORD` (repo → Settings → Secrets → Actions)
+
+### What the Deploy Script Does
+
+1. Optionally runs `npm run build` locally
+2. Uploads `.next/server/`, `.next/static/`, `.next/build/` via SFTP
+3. Uploads root manifests (`.next/BUILD_ID`, `.next/routes-manifest.json`, etc.)
+4. Uploads `package.json` + `package-lock.json`
+5. Runs `npm install --omit=dev` on server (keeps `node_modules` in sync)
+6. Creates/refreshes `_next → .next` symlink (see LiteSpeed note below)
+7. Kills the `lsnode` process → LiteSpeed spawns fresh one with new files
+8. Health check: curls `/login` and CSS file
+
+---
+
+## Critical Server Notes (for future debugging)
+
+### LiteSpeed vs Phusion Passenger restart behavior
+`touch tmp/restart.txt` works with **Apache + Phusion Passenger** only.  
+This server uses **LiteSpeed** — `restart.txt` does nothing.  
+**To restart the app:** `kill <lsnode PID>` — LiteSpeed auto-spawns a new process.
+
+```bash
+# Find and kill the app process:
+kill $(ps aux | grep "lsnode:/home/websflku/gymsync.websylime.com" | grep -v grep | awk '{print $2}')
+```
+
+### _next symlink (static files)
+LiteSpeed serves static files directly from filesystem. The URL `/_next/static/...` maps to a physical directory, not through Node.js.  
+The deploy script creates: `_next → .next` symlink in the app root.  
+**If CSS/JS 404s:** check this symlink exists.
+
+```bash
+ls -la /home/websflku/gymsync.websylime.com/_next
+# Should show: _next -> /home/websflku/gymsync.websylime.com/.next
+```
+
+### node_modules on server
+`node_modules/` must be installed on the server. The deploy script runs `npm install --omit=dev` after every deploy.  
+**If 503 with `Cannot find module 'next'`:** run `npm install --omit=dev` on server via SSH.
+
+### Route group directories (app) and (auth)
+Turbopack builds route JS into `.next/server/app/(app)/` and `.next/server/app/(auth)/`.  
+These directories need **execute permission (755)** to be traversable.  
+The deploy script runs `chmod 755` on all `.next/` dirs automatically.
+
+### Stale lsnode process
+If a lsnode process started before new files were uploaded, it serves stale state even after restart.txt is touched. Always kill and let LiteSpeed restart fresh.
+
+### outputFileTracingRoot Windows path
+`required-server-files.json` contains `"outputFileTracingRoot": "G:\\Work out planner\\gymsync"` — a Windows absolute path. This is harmless; Next.js uses it for file tracing only and doesn't resolve it at runtime on Linux.
+
+### Server .env.local
+Located at `/home/websflku/gymsync.websylime.com/.env.local` on the server.  
+Contains Supabase keys and `NEXT_PUBLIC_SITE_URL=https://gymsync.websylime.com`.  
+Not committed to git — update manually via SSH/SFTP if Supabase keys change.
+
+---
+
+## Issues Fixed (history)
+
+| Issue | Fix |
+|-------|-----|
+| Exercise images wrong, animation broken | `update_exercise_images.sql` overwrote GitHub URLs with static ones. `restore_github_images.sql` restores animated URLs |
+| `gym_group_members` FK violation for new users | New users had no `profiles` row. Fixed with Postgres trigger in `fix_profile_trigger.sql` |
+| `/login` 404 after deploy | Route JS files in `(app)/` and `(auth)/` were missing — not uploaded. Deploy script now uploads full `.next/server/` tree |
+| CSS/JS 404 (`/_next/static/`) | LiteSpeed needs physical `_next/` dir. Fixed with `_next → .next` symlink |
+| 503 after auto-deploy | Root `package.json` was `.next/package.json` (wrong). Fixed: deploy script now uploads real `package.json` and runs `npm install --omit=dev` |
+| OOM on server build | `npm run build` on shared host killed by OOM killer. Fixed: build on CI runner (GitHub Actions ubuntu-latest), upload artifacts via SFTP |
+| LiteSpeed not restarting | `touch restart.txt` is Passenger/Apache only. Fixed: deploy script kills lsnode PID directly |
+| `(app)`/`(auth)` dirs Permission denied | Directories uploaded with `rw-rw-r--` (no execute bit). Fixed: `chmod 755` on all `.next/` dirs after upload |
+
+---
+
+## File Structure (key files)
+
+```
+gymsync/
+├── server.js                    # Phusion Passenger entry point
+├── .deploy.env                  # LOCAL ONLY (gitignored) — SSH_PASSWORD
+├── .env.local                   # LOCAL ONLY (gitignored) — Supabase keys
+├── scripts/
+│   └── deploy.js                # Deploy script (build + SFTP upload + restart)
+├── .github/
+│   └── workflows/
+│       └── deploy.yml           # GitHub Actions auto-deploy on push to main
+├── supabase/
+│   ├── fix_profile_trigger.sql  # Auto-create profiles on signup
+│   └── restore_github_images.sql # Restore animated exercise image URLs
+├── exercises_seed.sql           # 150+ exercises seed data
+├── src/
+│   ├── app/
+│   │   ├── (app)/               # Authenticated routes (dashboard, exercises, etc.)
+│   │   ├── (auth)/              # Auth routes (login, signup, onboarding)
+│   │   └── api/                 # API routes
+│   ├── components/              # Shared UI components
+│   └── lib/                     # Supabase client, utilities
+└── public/
+    ├── manifest.json            # PWA manifest
+    └── sw.js                    # Service worker
+```
