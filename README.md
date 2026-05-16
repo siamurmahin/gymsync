@@ -25,7 +25,7 @@ Free workout planner for gym beginners. Plan workouts, log sets & reps, track pr
 - **Auth** — email/password signup, login, onboarding flow
 - **Dashboard** — overview of recent workouts and stats
 - **Workout Planner** — create and schedule workouts
-- **Exercise Library** — 150+ exercises with animated images (0.jpg/1.jpg cycling on hover) sourced from [free-exercise-db](https://github.com/yuhonas/free-exercise-db)
+- **Exercise Library** — 900+ exercises with animated images (0.jpg/1.jpg cycling on hover) sourced from [free-exercise-db](https://github.com/yuhonas/free-exercise-db)
 - **Active Workout** — real-time set/rep logging during a session
 - **Progress Tracker** — charts and history
 - **Group Gym** — create/join gym groups with real-time chat (Supabase Realtime)
@@ -52,6 +52,10 @@ Supabase project: `xclzeevcuhsnbqlufbog.supabase.co`
 Key SQL files:
 - `exercises_seed.sql` — seed 150+ exercises with GitHub image URLs
 - `more_exercises.sql` — additional exercises
+- `supabase/bulk_exercises.sql` — 748 additional exercises bulk-imported from free-exercise-db (10 specific muscle groups)
+- `supabase/bulk_exercises_rollback.sql` — DELETE to undo the bulk import
+- `supabase/expand_muscle_groups.sql` — migration expanding muscle groups from 6 broad to 10 specific values
+- `supabase/fix_profiles_schema.sql` — adds missing columns to `profiles` table + expands `goal` check constraint to all 6 goal types
 - `supabase/restore_github_images.sql` — restore animated GitHub image URLs if overwritten
 - `supabase/fix_profile_trigger.sql` — trigger that auto-creates `profiles` row when a new user signs up (fixes FK violation on `gym_group_members`)
 
@@ -126,7 +130,15 @@ Every push to `main` triggers `.github/workflows/deploy.yml`:
 2. `npm run build`
 3. `node scripts/deploy.js --no-build` (SFTP upload + restart)
 
-Required GitHub secret: `CPANEL_PASSWORD` (repo → Settings → Secrets → Actions)
+Required GitHub secrets (repo → Settings → Secrets → Actions):
+
+| Secret | Value |
+|--------|-------|
+| `CPANEL_PASSWORD` | cPanel SSH password |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://xclzeevcuhsnbqlufbog.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
+
+**Why Supabase keys as secrets:** `NEXT_PUBLIC_*` vars are baked into the JS bundle at build time. If CI builds without them, `createBrowserClient` gets `undefined` and throws on the live site.
 
 ### What the Deploy Script Does
 
@@ -185,6 +197,17 @@ Not committed to git — update manually via SSH/SFTP if Supabase keys change.
 
 ---
 
+## Muscle Groups (current)
+
+10 specific groups (expanded from original 6 broad groups in May 2025):
+
+`chest` · `back` · `legs` · `shoulders` · `biceps` · `triceps` · `forearms` · `abs` · `glutes` · `calves`
+
+Old values (`arms`, `butt`, `cardio`) no longer valid anywhere in the codebase or DB.  
+DB constraint updated via `supabase/expand_muscle_groups.sql`.
+
+---
+
 ## Issues Fixed (history)
 
 | Issue | Fix |
@@ -197,6 +220,11 @@ Not committed to git — update manually via SSH/SFTP if Supabase keys change.
 | OOM on server build | `npm run build` on shared host killed by OOM killer. Fixed: build on CI runner (GitHub Actions ubuntu-latest), upload artifacts via SFTP |
 | LiteSpeed not restarting | `touch restart.txt` is Passenger/Apache only. Fixed: deploy script kills lsnode PID directly |
 | `(app)`/`(auth)` dirs Permission denied | Directories uploaded with `rw-rw-r--` (no execute bit). Fixed: `chmod 755` on all `.next/` dirs after upload |
+| Muscle group type errors (TypeScript build fail) | `MuscleGroup` expanded from 6 broad groups to 10 specific ones. Updated all 6 affected files: `planner/page.tsx`, `workout/page.tsx`, `settings/page.tsx`, `onboarding/page.tsx`, `ExerciseActions.tsx`, `utils.ts` |
+| Onboarding "Start training" stuck loading | No try-catch in `handleFinish` — any exception left `saving=true` forever. Added try-catch, proper `setSaving(false)` in all paths, error message display |
+| Onboarding upsert silently failing | `profiles` table had only 7 columns and `goal` constraint limited to 3 values. Added 10 missing columns + expanded constraint to all 6 goal types via `supabase/fix_profiles_schema.sql` |
+| Live site "URL and API key required" error | CI build ran without `NEXT_PUBLIC_*` env vars — undefined baked into bundle. Fixed: added `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` as GitHub Actions secrets, referenced in workflow build step |
+| Dashboard showing wrong day (Friday instead of Saturday) | Server component used `new Date()` in UTC — users in UTC+6+ see previous day. Fixed: extracted weekly plan section to `DashboardWeeklyPlan` client component so `new Date().getDay()` runs in the browser with the user's local timezone |
 
 ---
 
@@ -208,12 +236,19 @@ gymsync/
 ├── .deploy.env                  # LOCAL ONLY (gitignored) — SSH_PASSWORD
 ├── .env.local                   # LOCAL ONLY (gitignored) — Supabase keys
 ├── scripts/
-│   └── deploy.js                # Deploy script (build + SFTP upload + restart)
+│   ├── deploy.js                # Deploy script (build + SFTP upload + restart)
+│   ├── fetch-bulk-exercises.mjs # Generate bulk_exercises.sql from free-exercise-db
+│   └── gen-muscle-migration.mjs # Generate expand_muscle_groups.sql
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml           # GitHub Actions auto-deploy on push to main
 ├── supabase/
+│   ├── schema.sql               # Initial DB schema (reference only — live DB has migrations applied)
 │   ├── fix_profile_trigger.sql  # Auto-create profiles on signup
+│   ├── fix_profiles_schema.sql  # Add missing columns + expand goal/muscle constraints
+│   ├── expand_muscle_groups.sql # Migrate exercises from 6 broad → 10 specific muscle groups
+│   ├── bulk_exercises.sql       # 748 exercises imported from free-exercise-db
+│   ├── bulk_exercises_rollback.sql # Undo bulk import
 │   └── restore_github_images.sql # Restore animated exercise image URLs
 ├── exercises_seed.sql           # 150+ exercises seed data
 ├── src/
@@ -221,8 +256,12 @@ gymsync/
 │   │   ├── (app)/               # Authenticated routes (dashboard, exercises, etc.)
 │   │   ├── (auth)/              # Auth routes (login, signup, onboarding)
 │   │   └── api/                 # API routes
-│   ├── components/              # Shared UI components
-│   └── lib/                     # Supabase client, utilities
+│   ├── components/
+│   │   ├── DashboardWeeklyPlan.tsx  # Client component — today detection uses local timezone
+│   │   └── ExerciseActions.tsx      # Add/delete exercise forms
+│   └── lib/
+│       ├── types.ts             # MuscleGroup, FocusArea, Goal, Profile, etc.
+│       └── utils.ts             # generateWeeklyPlan, BMI helpers, etc.
 └── public/
     ├── manifest.json            # PWA manifest
     └── sw.js                    # Service worker
