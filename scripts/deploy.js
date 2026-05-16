@@ -55,6 +55,7 @@ const UPLOAD_FILES = [
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function loadEnv() {
+  if (process.env.SSH_PASSWORD) return; // already set (e.g. GitHub Actions secret)
   const envFile = path.join(LOCAL_BASE, '.deploy.env');
   if (!fs.existsSync(envFile)) {
     console.error('\n❌ Missing .deploy.env — create it with: SSH_PASSWORD=your_password\n');
