@@ -15,10 +15,12 @@ const MUSCLE_GROUPS: { value: MuscleGroup; emoji: string; label: string }[] = [
   { value: 'back',      emoji: '🏋️', label: 'Back' },
   { value: 'legs',      emoji: '🦵', label: 'Legs' },
   { value: 'shoulders', emoji: '🔝', label: 'Shoulders' },
-  { value: 'arms',      emoji: '💪', label: 'Arms' },
+  { value: 'biceps',    emoji: '💪', label: 'Biceps' },
+  { value: 'triceps',   emoji: '🦾', label: 'Triceps' },
+  { value: 'forearms',  emoji: '🤜', label: 'Forearms' },
   { value: 'abs',       emoji: '🔥', label: 'Abs' },
-  { value: 'butt',      emoji: '🍑', label: 'Glutes' },
-  { value: 'cardio',    emoji: '🏃', label: 'Cardio' },
+  { value: 'glutes',    emoji: '🍑', label: 'Glutes' },
+  { value: 'calves',    emoji: '🦶', label: 'Calves' },
 ]
 
 const COMPOUND_KEYWORDS = ['squat','deadlift','press','row','pull-up','pullup','chin','dip','barbell','lunge']

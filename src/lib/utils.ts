@@ -56,9 +56,9 @@ export function bmiBarColor(bmi: number): string {
 
 const PUSH: MuscleGroup[] = ['chest', 'shoulders']
 const PULL: MuscleGroup[] = ['back']
-const ARMS: MuscleGroup[] = ['arms']
+const ARMS: MuscleGroup[] = ['biceps', 'triceps', 'forearms']
 const CORE: MuscleGroup[] = ['abs']
-const LOWER: MuscleGroup[] = ['legs', 'butt']
+const LOWER: MuscleGroup[] = ['legs', 'glutes', 'calves']
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -76,7 +76,7 @@ export function generateWeeklyPlan(
 
   const isFullBody = focusAreas.includes('full_body')
   const muscles: MuscleGroup[] = isFullBody
-    ? ['chest', 'back', 'legs', 'shoulders', 'arms', 'abs']
+    ? ['chest', 'back', 'legs', 'shoulders', 'biceps', 'triceps', 'forearms', 'abs', 'glutes', 'calves']
     : (focusAreas.filter(a => a !== 'full_body') as MuscleGroup[])
 
   const push = intersect(PUSH, muscles)

@@ -25,9 +25,12 @@ const FOCUS_AREAS: { value: FocusArea; label: string; emoji: string }[] = [
   { value: 'back',      label: 'Back',      emoji: '🏋️' },
   { value: 'legs',      label: 'Legs',      emoji: '🦵' },
   { value: 'shoulders', label: 'Shoulders', emoji: '🔝' },
-  { value: 'arms',      label: 'Arms',      emoji: '💪' },
+  { value: 'biceps',    label: 'Biceps',    emoji: '💪' },
+  { value: 'triceps',   label: 'Triceps',   emoji: '🦾' },
+  { value: 'forearms',  label: 'Forearms',  emoji: '🤜' },
   { value: 'abs',       label: 'Abs',       emoji: '🔥' },
-  { value: 'butt',      label: 'Glutes',    emoji: '🍑' },
+  { value: 'glutes',    label: 'Glutes',    emoji: '🍑' },
+  { value: 'calves',    label: 'Calves',    emoji: '🦶' },
   { value: 'full_body', label: 'Full Body', emoji: '⚡' },
 ]
 const BODY_TYPES: { value: BodyType; label: string; desc: string }[] = [
@@ -57,7 +60,7 @@ const BUILD_GOALS = [
   { value: 'toned_butt', label: 'Toned Butt', emoji: '🍑' },
 ]
 
-const ALL_MUSCLE_AREAS: FocusArea[] = ['chest', 'back', 'legs', 'shoulders', 'arms', 'abs', 'butt']
+const ALL_MUSCLE_AREAS: FocusArea[] = ['chest', 'back', 'legs', 'shoulders', 'biceps', 'triceps', 'forearms', 'abs', 'glutes', 'calves']
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

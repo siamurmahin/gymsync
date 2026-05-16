@@ -24,13 +24,16 @@ const GOALS: { value: Goal; label: string; desc: string; emoji: string }[] = [
 ]
 
 const FOCUS_AREAS: { value: FocusArea; label: string; emoji: string }[] = [
-  { value: 'back',      label: 'Back',       emoji: '🔙' },
-  { value: 'shoulders', label: 'Shoulders',  emoji: '🔝' },
-  { value: 'arms',      label: 'Arms',       emoji: '💪' },
   { value: 'chest',     label: 'Chest',      emoji: '🫁' },
-  { value: 'abs',       label: 'ABS',        emoji: '🔥' },
-  { value: 'butt',      label: 'Butt',       emoji: '🍑' },
+  { value: 'back',      label: 'Back',       emoji: '🔙' },
   { value: 'legs',      label: 'Legs',       emoji: '🦵' },
+  { value: 'shoulders', label: 'Shoulders',  emoji: '🔝' },
+  { value: 'biceps',    label: 'Biceps',     emoji: '💪' },
+  { value: 'triceps',   label: 'Triceps',    emoji: '🦾' },
+  { value: 'forearms',  label: 'Forearms',   emoji: '🤜' },
+  { value: 'abs',       label: 'Abs',        emoji: '🔥' },
+  { value: 'glutes',    label: 'Glutes',     emoji: '🍑' },
+  { value: 'calves',    label: 'Calves',     emoji: '🦶' },
   { value: 'full_body', label: 'Full Body',  emoji: '🌟' },
 ]
 
@@ -121,7 +124,7 @@ export default function OnboardingPage() {
     return () => clearInterval(timer)
   }, [step])
 
-  const ALL_MUSCLE_AREAS: FocusArea[] = ['chest', 'back', 'legs', 'shoulders', 'arms', 'abs', 'butt']
+  const ALL_MUSCLE_AREAS: FocusArea[] = ['chest', 'back', 'legs', 'shoulders', 'biceps', 'triceps', 'forearms', 'abs', 'glutes', 'calves']
 
   function toggleFocus(area: FocusArea) {
     if (area === 'full_body') {

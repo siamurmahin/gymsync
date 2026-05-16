@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { Plus, Trash2, X, ImagePlus } from 'lucide-react'
 import type { MuscleGroup } from '@/lib/types'
 
-const MUSCLE_GROUPS: MuscleGroup[] = ['chest', 'back', 'legs', 'shoulders', 'arms', 'abs', 'butt']
+const MUSCLE_GROUPS: MuscleGroup[] = ['chest', 'back', 'legs', 'shoulders', 'biceps', 'triceps', 'forearms', 'abs', 'glutes', 'calves']
 
 export function AddExerciseForm() {
   const router = useRouter()
